@@ -1,0 +1,22 @@
+#########################################################################
+
+# Function RelatorsToGroup takes as input a list of sets of relators of lattices of I55, formatted as in the text file I55lattices.txt. The output of RelatorsToGroups is the corresponding list of finitely presented lattices of I55.
+
+#########################################################################
+
+RelatorsToGroup := function(relators)
+local grouplist, f, g, i;
+
+grouplist := []; # initialize list of groups as the empty list
+f := FreeGroup(10); # define the free group on 10 generators
+
+# for each set of relators in the given list of sets of relators, define the associated finitely presented group and add it to the list of groups to be returned
+
+for i in [1..Size(relators)] do
+   g := f / [ f.(relators[i][1][1]+1)*f.(relators[i][1][2]+1)*f.(relators[i][1][3]+1)*f.(relators[i][1][4]+1)*f.(relators[i][1][5]+1), f.(relators[i][2][1]+1)*f.(relators[i][2][2]+1)*f.(relators[i][2][3]+1)*f.(relators[i][2][4]+1)*f.(relators[i][2][5]+1), f.(relators[i][3][1]+1)*f.(relators[i][3][2]+1)*f.(relators[i][3][3]+1)*f.(relators[i][3][4]+1)*f.(relators[i][3][5]+1), f.(relators[i][4][1]+1)*f.(relators[i][4][2]+1)*f.(relators[i][4][3]+1)*f.(relators[i][4][4]+1)*f.(relators[i][4][5]+1), f.(relators[i][5][1]+1)*f.(relators[i][5][2]+1)*f.(relators[i][5][3]+1)*f.(relators[i][5][4]+1)*f.(relators[i][5][5]+1), f.1*f.6, f.2*f.7, f.3*f.8, f.4*f.9, f.5*f.10];
+   Append(grouplist, [g]);
+od;
+
+return grouplist; # return the list of finitely presented groups
+end;
+
