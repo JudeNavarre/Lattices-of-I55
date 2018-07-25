@@ -1,0 +1,73 @@
+#################################################################################
+# This code can be used to construct the positive scaffolded presentations of lattices of I55.
+#################################################################################
+
+# The following code can be quickly executed to create the list of relators which will be used to form positive scaffolded presentations of lattices of I55. 
+
+Read("MakePTuples.txt");
+tuples := MakePTuples();
+
+#####################################################################################
+# The function ConstructPLattices takes as input a list of relators, encoded as list of length 5 in the digits 0-4. It produces all the positively presented scaffolded presentations of I55. Because the output is long, we recommend suppressing the output.
+#####################################################################################
+
+ConstructPLattices := function(mylist)
+local chosen, newlist, s, i1, i2, i3, i4, i5, j1, j2, relators, alledges, smalledges, k1, k2, nodupes;
+
+s := Size(mylist);
+relators := [];
+alledges:= [];
+
+# Create a list all the cyclic subwords for each relator in mylist.
+
+for k1 in [1..s] do
+      smalledges :=[];
+for k2 in [1..5] do
+      if k2 < 5 then
+         Append( smalledges, [[mylist[k1][k2], mylist[k1][k2+1]]]);
+      else
+         Append( smalledges, [[mylist[k1][k2], mylist[k1][1]]]);
+      fi;
+od;
+   Append( alledges, [smalledges]);
+od;
+
+for i1 in [1..s] do
+for i2 in [i1+1..s] do
+for i3 in [i2+1..s] do
+for i4 in [i3+1..s] do
+for i5 in [i4+1..s] do
+
+# Pick 5 distinct relators, and create the corresponding Whitehead graph.
+   
+   nodupes := true;
+
+   newlist := [];
+   Append(newlist, alledges[i1]);
+   Append(newlist, alledges[i2]);
+   Append(newlist, alledges[i3]);
+   Append(newlist, alledges[i4]);
+   Append(newlist, alledges[i5]); 
+
+j1:=1;
+while nodupes = true and j1<=25 do
+   j2:=j1+1;
+
+# By the Pigeonhole principle, to determine whether the Whitehead graph is K(5,5), it suffices to consider whether all 25 of the cyclic subwords are distinct, producing distinct edges in the Whitehead graph. 
+
+   while nodupes = true and j2<=25 do
+      if newlist[j1] = newlist[j2] then
+         nodupes := false;
+      fi;
+      j2:=j2+1;
+   od;
+   j1:=j1+1;
+od;
+
+   if nodupes = true then      
+      Append( relators, [ [mylist[i1], mylist[i2], mylist[i3], mylist[i4], mylist[i5]] ]);
+   fi;
+
+od; od; od; od; od;
+return relators;
+end;

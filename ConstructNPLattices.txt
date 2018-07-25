@@ -1,0 +1,382 @@
+###############################################################
+# This code is used to produce the lattices in I55.
+###############################################################
+
+# The file "newtuples.txt" contains tuples of numbers in the digits 0-9 which represent the generators of the free group on 5 elements and their inverses.  The inverse of the digit x is represented by the digit (x+5) modulo 5.
+
+Read("newtuples.txt");
+
+#####################################################################################################
+# Because GAP does not have a built in function which will sort each sublist in a list of lists, we define a simple function for this purpose. 
+#####################################################################################################
+
+sortlist := function(list)
+local newlist, i;
+
+newlist := ShallowCopy(list);
+
+for i in [1..Size(newlist)] do
+    Sort(newlist[i]);
+od;
+
+Sort(newlist);
+return newlist;
+end;
+
+##################################################################################################
+
+# The function IsK55 takes as input a list of length of 25 of sublists each of length 2, which represent the length 2 cyclic subwords of the relators of a presentation of a potential lattice of I55. The function constructs the corresponding Whitehead graph of the presentation, checks if the Whitehead graph is graph-isomorphic to K55, and returns 'true' or 'false.
+
+
+IsK55 := function(lol) 
+local k, j, i, k1, sos, pairedwithzero, coloredwithzero, pairedwithi, k55;
+
+sos := sortlist(lol); 
+
+# the elements of the set lol represent undirected edges in the Whitehead graph. They are sorted to ensure that if a list of length 2 contains the digit 0, which represents the vertex x_0^- in the Whitehead graph, that that digit appears first in the list. 
+
+k55 := true;
+
+pairedwithzero := [];
+coloredwithzero := [];
+
+# Create a set 'pairedwithzero' of all the vertices in the Whitehead graph which are adjacent to x_0^-.  
+
+for k in [1..Size(sos)] do
+   if sos[k][1] = 0 then
+      Append(pairedwithzero, [sos[k][2]]); 
+   fi;
+od;
+
+# If the Whitehead graph is to be K55, it is necessary that exactly 5 vertices sharre an edge with x_0^-. We check this condition, and the function automatically returns 'false' if the condition is not satisfied. 
+
+if not Size(pairedwithzero) = 5 then
+   k55 := false; 
+fi;
+
+if k55 = true then
+
+# If the Whitehead graph is to be K55, any vertex which does not share an edge with x_0^- should possess the same coloring as x_0^-. We make a list 'coloredwithzero' of these elements. 
+
+   for j in [1..9] do
+       if not j in pairedwithzero then
+          Append(coloredwithzero, [j]); 
+       fi;
+   od;
+
+# For each of the vertices v which does not share an edge with x_0^-, we make a list of the vertices which share an edge with v. We then check that this set is equal to the set of vertices adjacent to x_0^-. If this is false for any vertex, the function automatically returns 'false.' If it true for all vertices, this suffices to show that the graph is K55, and the function returns 'true.' 
+
+   for i in coloredwithzero do
+   if k55 = true then
+       pairedwithi := [];
+       for k1 in [1..Size(sos)] do
+           if sos[k1][1] = i then
+              Append(pairedwithi, [sos[k1][2]]);
+           elif sos[k1][2] = i then
+              Append(pairedwithi, [sos[k1][1]]); 
+           fi;
+       od;
+      
+       pairedwithi := Set(pairedwithi);
+ 
+       if not pairedwithi = pairedwithzero then 
+          k55 := false;
+       fi;
+   fi;
+   od; 
+fi;
+
+return k55;
+end;
+
+###############################################################################
+# The function TrimDoubles one tool which we will use in the construction of scaffolded presentations. Given a list 'mylist' of relators, an indexing set for a sublist of these relators (typically [1..Size(mylist)]), and a set 'edges' of words of length 2, the function will remove from the set of relators any elements which contain a cyclic subword which is contained in 'edges' or whose inverse is contained in 'edges'. These will be used to eliminate presentations whose Whitehead graph would have a double edge, and will also be used in a subsequent program to eliminate presentations whose Whitehead graph would have a triangle.
+###############################################################################
+
+TrimDoubles := function(mylist, indices, edges)
+local newlist, newindices, templist, i, j, k, trim;
+newlist := ShallowCopy(mylist);
+newindices := ShallowCopy(indices);
+
+
+j := 1;
+while j <= Size(newindices) do
+   trim := false;
+   i := newindices[j];
+   templist := [ [newlist[i][1], newlist[i][2]], 
+                 [newlist[i][2], newlist[i][3]], 
+                 [newlist[i][3], newlist[i][4]], 
+                 [newlist[i][4], newlist[i][5]], 
+                 [newlist[i][5], newlist[i][1]] ];
+
+   for k in [1..Size(edges)] do
+      if edges[k] in templist or [RemInt(edges[k][2] + 5, 10), RemInt(edges[k][1] + 5, 10)] in templist then
+         trim := true;
+      fi;
+   od;
+
+   if trim = true then
+      Remove(newindices, j);
+      trim := false;
+   else
+      j := j + 1;
+   fi;
+od;
+return newindices;
+end;
+
+
+############################################################################################
+# The function IsBipartite takes as input a list of cyclic subwords of a graph, encoded as a list of lists of length 2, and determines if the corresponding Whitehead graph is bipartite. The function returns a value of 'true' or 'false' 
+############################################################################################
+
+IsBipartite := function(edges)
+local list, i, bipartite;
+
+# The list 'list' will contain information about the coloring of each vertex in the Whitehead graph. The first five entries correspond to the vertices x_0^-, x_1^-, x_2^-, x_3^-, x_4^- and the last five entries correspond to the vertices x_0^+, x_1^+, x_2^+, x_3^+, x_4^+. The choice of color will be indicated with either a '1' or '0'. We initialize the list as a list of ten 2s so that is the correct length. 
+
+list := [2,2,2,2,2,2,2,2,2,2]; 
+bipartite := true;
+
+
+# We decide that the vertex corresponding to the first digit in the first edge will have color '0'. 
+
+list[ edges[1][1] + 1] := 0;
+
+# If the graph is to be bipartite, this forces the vertex incident to the first vertex to have color '1'. 
+
+list[ RemInt(edges[1][2] + 5, 10) + 1 ] := 1;
+
+# We pick one of the remaining edges. 
+
+for i in [2..Size(edges)] do
+
+# if the first vertex in that edge is already colored, we check if the second vertex in that edge is also already colored. If the colors are equal, the function returns 'false' and ends. If the colors are not equal or the second vertex has no color, the second vertex is assigned a color opposite to the first. 
+
+    if list[edges[i][1] + 1] = 0 then
+       if list[ RemInt(edges[i][2] + 5, 10) + 1] = 0 then
+          bipartite := false;
+       else
+          list[ RemInt(edges[i][2] + 5, 10) + 1] := 1;
+       fi;
+    elif list[edges[i][1] + 1] = 1 then
+       if list[ RemInt(edges[i][2] + 5, 10) + 1] = 1 then
+          bipartite := false;
+       else
+          list[ RemInt(edges[i][2] + 5, 10) + 1] := 0;
+       fi;
+    elif list[ RemInt(edges[i][2] + 5, 10) + 1] = 0 then
+       if list[ edges[i][1] + 1] = 0 then
+          bipartite := false;
+       else
+          list[ edges[i][1] + 1] := 1;
+       fi;
+    elif list[ RemInt(edges[i][2] + 5, 10) + 1] = 1 then
+       if list[ edges[i][1] + 1] = 1 then
+          bipartite := false;
+       else
+          list[ edges[i][1] + 1] := 0;
+       fi;
+    fi;
+od;
+
+return bipartite;
+end;
+
+#########################################################################################
+# This given a list of relators 'mylist', and indexing set 'indices' for some sublist of mylist (typically [1..Size(mylist)]), and a 'edges' of cyclic subwords of length 2, the function removes from mylist all the relators which, together with the set of cyclic subwords, would create a Whitehead graph that is not bipartite. 
+#########################################################################################
+
+
+TrimNotBipartite := function(mylist, indices, edges)
+local newlist, newindices, templist, i, j, k, tempedges;
+newlist := ShallowCopy(mylist);
+newindices := ShallowCopy(indices);
+
+j := 1;
+while j <= Size(newindices) do
+   i := newindices[j];
+   tempedges := ShallowCopy(edges);
+
+# We create a list which contains the given cyclic subwords and the 5 additional cyclic subwords which would arise from a choice of relator from 'mylist.' 
+
+   templist := [ [newlist[i][1], newlist[i][2]], 
+                 [newlist[i][2], newlist[i][3]], 
+                 [newlist[i][3], newlist[i][4]], 
+                 [newlist[i][4], newlist[i][5]], 
+                 [newlist[i][5], newlist[i][1]] ];
+   Append(tempedges, templist);
+
+# We check if the corresponding Whitehead graph is bipartite, and if not, remove the relator from 'mylist.' 
+        
+   if IsBipartite(tempedges) = false then
+      Remove(newindices, j);
+   else
+      j := j + 1;
+   fi;
+od;
+return newindices;
+end;
+
+#######################################################################################
+# This simple function takes as input a list of relators 'mylist', and indexing set for some sublist of mylist (typically ([1..Size(mylist)]), and an index k in [1..Size(mylist)]). It then removes from mylist all relators whose position in the list is smaller than k.
+#######################################################################################
+
+TrimTooBig := function(mylist, indices, k)
+local newindices, j;
+
+newindices := [];
+
+for j in [1..Size(indices)] do
+    if indices[j] > k then
+       Append(newindices, [indices[j]] );
+    fi;
+od;
+
+return newindices;
+end;
+
+##############################################################################################
+# Given a list of relators 'mylist', an indexing set for some sublist of 'mylist' (typically [1..Size(mylist)]), and a set of words of length 2 encodes as a list of lists of length 2, the function TrimTriangles removes from mylist all the relators so that the Whitehead graph corresponding to the given set of subword and the chosen relator possesses a triangle.
+##############################################################################################
+
+TrimTriangles := function(mylist, indices, edges)
+local newindices, templist, i, j, newedges;
+
+newedges := [];
+for i in [1..Size(edges)] do
+   for j in [(i+1)..Size(edges)] do
+
+# take two distinct cyclic subwords in the given set 'edges'. These edges will form a path of length 2 in the Whitehead graph if any of the following two cases is true: If the first letters of both words are equal, or if the last letters of both words are equal, or if the first letter of the first word  and the last letter of the last word are equal and the second letter of the first word and the first letter of the last word are inverses. In each of these cases, add to a list the two endpoints of this path. 
+
+       if edges[i][1] = edges[j][1] then
+          Append(newedges, [ [RemInt(edges[i][2] + 5, 10), edges[j][2]] ] );
+       elif edges[i][2] = edges[j][2] then
+          Append(newedges, [ [edges[j][1], RemInt(edges[i][1] + 5, 10) ] ] );
+       elif edges[i][1] = edges[j][2] and edges[i][2] = RemInt(edges[j][1] + 5, 10) then
+          Append(newedges, [ [edges[i][1], edges[j][2]] ]);
+       fi;
+   od;
+od;
+
+# If an edge connects an endpoint of a path of length 2 in the Whitehead graph, the Whitehead graph will have a triangle. We use the function TrimDouble to remove all the relators which would contribute such an edge.
+
+newindices := TrimDoubles(mylist, indices, newedges);
+
+return newindices;
+end;
+
+
+
+
+##################################################################################################
+# The function ConstructNPLattices constructs scaffolded presentations for all the lattices of I55 which do not admit positive scaffolded presentations. 
+
+# As input, it takes a list of lists of length 5 in the digits 0-9. Each of those sublists represents a relator of length 5 for an element of the free group on 5 generators, with the inverse of the digit x represented by the digit (x+5) modulo 10. 
+
+# The function returns an extremely long list which contains all the lattices of I55 which do not admit scaffolded presentations. We recommend that the user suppress output when executing this command. In addition, the function will automatically create a text file containing the scaffolded presentations.
+##################################################################################################
+
+ConstructNPLattices := function(mylist)
+local newlist, indices, k, k1, k2, s, alledges, smalledges, i1, i2, i3, i4, i5, relators, indices0, indices1, indices2, indices3, indices4, growingedges, ge1, ge2, ge3, badtuples, graph;
+
+# We great a list badtuples which contain representations all the relators which are either completely positive or negative. 
+
+badtuples := Tuples([0..4], 5);
+Append(badtuples, Tuples([5..9], 5));
+
+alledges := [];
+s := Size(mylist);
+relators := [];
+
+# For each relator in the input list, we construct a list of the corresponding 5 cyclic subwords of length 2. This will increase the speed at which we can check if a presentation has K55 as its Whitehead graph. 
+
+for k1 in [1..s] do
+      smalledges :=[];
+for k2 in [1..5] do
+      if k2 < 5 then
+         Append( smalledges, [[mylist[k1][k2], mylist[k1][k2+1]]]);
+      else
+         Append( smalledges, [[mylist[k1][k2], mylist[k1][1]]]);
+      fi;
+od;
+   Append( alledges, [smalledges]);
+od;
+
+for i1 in [1..8708] do
+
+# Once we have chosen an initial relator for the presentation, we can see immediately that certain other relators cannot be chosen. To eliminate redundancies in the presentations constructed, we remove all the relators which appear earlier in the input list than the relator we have just chosen. We also remove all relators which would create triangles or double edges in the Whitehead graph if chosen, or immediately cause the Whitehead graph to become not bipartite. 
+   
+   indices1 := TrimTooBig(mylist, [1..s], i1);
+   indices1 := TrimDoubles(mylist, indices1, alledges[i1]);
+   indices1 := TrimTriangles(mylist, indices1, alledges[i1]);
+   indices1 := TrimNotBipartite(mylist, indices1, alledges[i1]);
+
+for i2 in indices1 do
+
+# After chosing two relators, we repeat again eliminate candidates for the third relator which will cause it to be impossible to have K55 as the Whitehead graph.
+
+   indices2 := TrimTooBig(mylist, indices1, i2);
+   growingedges := ShallowCopy(alledges[i1]);
+   Append(growingedges, alledges[i2]);
+   indices2 := TrimDoubles(mylist, indices2, alledges[i2]);
+   indices2 := TrimTriangles(mylist, indices2, growingedges);
+   indices2 := TrimNotBipartite(mylist, indices2, growingedges);   
+
+for i3 in indices2 do
+
+# After chosing three relators, we eliminate impossible fourth relators. 
+
+   indices3 := TrimTooBig(mylist, indices2, i3);
+   ge1 := ShallowCopy(growingedges);
+   Append(ge1, alledges[i3]);
+   indices3 := TrimDoubles(mylist, indices3, alledges[i3]);
+   indices3 := TrimTriangles(mylist, indices3, ge1);
+   indices3 := TrimNotBipartite(mylist, indices3, ge1);
+
+for i4 in indices3 do
+
+# After choosing three relators, we eliminate impossible fifth relators. 
+
+   indices4 := TrimTooBig(mylist, indices2, i3);
+   ge2 := ShallowCopy(ge1);
+   Append(ge2, alledges[i4]);
+   indices4 := TrimDoubles(mylist, indices3, alledges[i4]);
+   indices4 := TrimTriangles(mylist, indices4, ge2);
+   indices4 := TrimNotBipartite(mylist, indices4, ge2);
+
+for i5 in indices4 do
+      
+     if i5 > i4 then
+
+# After choosing 5 relators, which check that the presentation is not positive and cannot be made positive by replacing a relator with its inverse.
+
+         if not mylist[i1] in badtuples or not mylist[i2] in badtuples or not mylist[i3] in badtuples or not mylist[i4] in badtuples or not mylist[i5] in badtuples then
+            ge3 := ShallowCopy(ge2);
+            Append(ge3, alledges[i5]);
+
+# Now we check that the presentation cannot be made positive by replacing a generator by its inverse, by ensuring that at least one generator and its inverse are equally colored.
+
+            if (not [0,0] in ge3 and not [5,5] in ge3) or (not [1,1] in ge3 and not [6,6] in ge3) or (not [2,2] in ge3 and not [7,7] in ge3) or (not [3,3] in ge3 and not [8,8] in ge3) or (not [4,4] in ge3 and not [9,9] in ge3) then
+
+
+# We construct the Whitehead graph of the presentation as a collection of lists of length 2. With the convention that the digit i, 0 <= i <= 4, corresponds to the generator x_i, we also use the digit i to represent the vertex x_i^- and the digit i+5 to represent the vertex x_i^+ in the Whitehead graph.
+               
+               graph := [];
+               for k in [1..Size(ge3)] do
+                   Append(graph, [[ ge3[k][1], RemInt(ge3[k][2] + 5, 10) ]]);
+               od;
+
+# We check if the Whitehead graph is isomorphic to K55. If true, we add the presentation to our list of scaffolded presentations for lattices of I55. 
+
+               if IsK55(graph) then
+                  Append( relators, [[ mylist[i1], mylist[i2], mylist[i3], mylist[i4], mylist[i5] ]] );
+               fi;
+            fi; 
+         fi;
+      fi; 
+od; od; od; od; od; 
+
+PrintTo("relators2.txt", relators);
+return relators;
+end;

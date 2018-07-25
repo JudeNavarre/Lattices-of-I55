@@ -1,0 +1,428 @@
+##########################################################################################
+This code implements a new algorithm designed to produce the lattices of I55 in a shorter period of time. 
+##########################################################################################
+
+
+
+Read("newtuples.txt");
+Read("besttuples.txt");
+Read("permisosingle.txt");
+Read("bestclasses.txt");
+
+
+sortlist := function(list)
+local newlist, i;
+
+newlist := ShallowCopy(list);
+
+for i in [1..Size(newlist)] do
+    Sort(newlist[i]);
+od;
+
+Sort(newlist);
+return newlist;
+end;
+
+
+
+
+IsK55 := function(lol)
+local k, j, i, k1, sos, pairedwithzero, coloredwithzero, pairedwithi, k55;
+
+sos := sortlist(lol);
+k55 := true;
+
+pairedwithzero := [];
+coloredwithzero := [];
+
+for k in [1..Size(sos)] do
+   if sos[k][1] = 0 then
+      Append(pairedwithzero, [sos[k][2]]);
+   fi;
+od;
+
+if not Size(pairedwithzero) = 5 then
+   k55 := false;
+fi;
+
+if k55 = true then
+   for j in [1..9] do
+       if not j in pairedwithzero then
+          Append(coloredwithzero, [j]);
+       fi;
+   od;
+
+   for i in coloredwithzero do
+   if k55 = true then
+       pairedwithi := [];
+       for k1 in [1..Size(sos)] do
+           if sos[k1][1] = i then
+              Append(pairedwithi, [sos[k1][2]]);
+           elif sos[k1][2] = i then
+              Append(pairedwithi, [sos[k1][1]]);
+           fi;
+       od;
+      
+       pairedwithi := Set(pairedwithi);
+
+       if not pairedwithi = pairedwithzero then
+          k55 := false;
+       fi;
+   fi;
+   od; 
+fi;
+
+return k55;
+end;
+
+
+Trim4 := function(mylist, indices, edges)
+local newlist, newindices, templist, i, j, k, trim;
+newlist := ShallowCopy(mylist);
+newindices := ShallowCopy(indices);
+
+
+j := 1;
+while j <= Size(newindices) do
+   trim := false;
+   i := newindices[j];
+   templist := [ [newlist[i][1], newlist[i][2]], 
+                 [newlist[i][2], newlist[i][3]], 
+                 [newlist[i][3], newlist[i][4]], 
+                 [newlist[i][4], newlist[i][5]], 
+                 [newlist[i][5], newlist[i][1]] ];
+
+   for k in [1..Size(edges)] do
+      if edges[k] in templist or [RemInt(edges[k][2] + 5, 10), RemInt(edges[k][1] + 5, 10)] in templist then
+         trim := true;
+      fi;
+   od;
+
+   if trim = true then
+      Remove(newindices, j);
+      trim := false;
+   else
+      j := j + 1;
+   fi;
+od;
+return newindices;
+end;
+
+
+Trim3 := function(mylist, indices, edges)
+local newlist, newindices, templist, i, j, k, trim;
+newlist := ShallowCopy(mylist);
+newindices := ShallowCopy(indices);
+
+
+j := 1;
+while j <= Size(newindices) do
+   trim := false;
+   i := newindices[j];
+   templist := [ [newlist[i][1], newlist[i][2]], 
+                 [newlist[i][2], newlist[i][3]], 
+                 [newlist[i][3], newlist[i][4]], 
+                 [newlist[i][4], newlist[i][5]], 
+                 [newlist[i][5], newlist[i][1]] ];
+
+   for k in [1..Size(edges)] do
+      if edges[k] in templist or [RemInt(edges[k][2] + 5, 10), RemInt(edges[k][1] + 5, 10)] in templist then
+         trim := true;
+      fi;
+   od;
+
+   if trim = true then
+      Remove(newindices, j);
+      trim := false;
+   else
+      j := j + 1;
+   fi;
+od;
+return newindices;
+end;
+
+
+bw := function(edges)
+local list, i, bipartite;
+list := [2,2,2,2,2,2,2,2,2,2];
+bipartite := true;
+
+list[ edges[1][1] + 1] := 0;
+list[ RemInt(edges[1][2] + 5, 10) + 1 ] := 1;
+
+for i in [2..Size(edges)] do
+    if list[edges[i][1] + 1] = 0 then
+       if list[ RemInt(edges[i][2] + 5, 10) + 1] = 0 then
+          bipartite := false;
+       else
+          list[ RemInt(edges[i][2] + 5, 10) + 1] := 1;
+       fi;
+    elif list[edges[i][1] + 1] = 1 then
+       if list[ RemInt(edges[i][2] + 5, 10) + 1] = 1 then
+          bipartite := false;
+       else
+          list[ RemInt(edges[i][2] + 5, 10) + 1] := 0;
+       fi;
+    elif list[ RemInt(edges[i][2] + 5, 10) + 1] = 0 then
+       if list[ edges[i][1] + 1] = 0 then
+          bipartite := false;
+       else
+          list[ edges[i][1] + 1] := 1;
+       fi;
+    elif list[ RemInt(edges[i][2] + 5, 10) + 1] = 1 then
+       if list[ edges[i][1] + 1] = 1 then
+          bipartite := false;
+       else
+          list[ edges[i][1] + 1] := 0;
+       fi;
+    fi;
+od;
+
+return bipartite;
+end;
+
+
+TrimNotBipartite := function(mylist, indices, edges)
+local newlist, newindices, templist, i, j, k, tempedges;
+newlist := ShallowCopy(mylist);
+newindices := ShallowCopy(indices);
+
+j := 1;
+while j <= Size(newindices) do
+   i := newindices[j];
+   tempedges := ShallowCopy(edges);
+   templist := [ [newlist[i][1], newlist[i][2]], 
+                 [newlist[i][2], newlist[i][3]], 
+                 [newlist[i][3], newlist[i][4]], 
+                 [newlist[i][4], newlist[i][5]], 
+                 [newlist[i][5], newlist[i][1]] ];
+   Append(tempedges, templist);
+        
+   if bw(tempedges) = false then
+      Remove(newindices, j);
+   else
+      j := j + 1;
+   fi;
+od;
+return newindices;
+end;
+
+
+TrimTooBig := function(mylist, indices, k)
+local newindices, j;
+
+newindices := [];
+
+for j in [1..Size(indices)] do
+    if indices[j] > k then
+       Append(newindices, [indices[j]] );
+    fi;
+od;
+
+return newindices;
+end;
+
+
+TrimTriangles := function(mylist, indices, edges)
+local newindices, templist, i, j, newedges;
+
+newedges := [];
+for i in [1..Size(edges)] do
+   for j in [(i+1)..Size(edges)] do
+       if edges[i][1] = edges[j][1] then
+          Append(newedges, [ [RemInt(edges[i][2] + 5, 10), edges[j][2]] ] );
+       elif edges[i][2] = edges[j][2] then
+          Append(newedges, [ [edges[j][1], RemInt(edges[i][1] + 5, 10) ] ] );
+       elif edges[i][1] = edges[j][2] and edges[i][2] = RemInt(edges[j][1] + 5, 10) then
+          Append(newedges, [ [edges[i][1], edges[j][2]] ]);
+       fi;
+   od;
+od;
+
+newindices := Trim4(mylist, indices, newedges);
+
+return newindices;
+end;
+
+
+
+
+PermIsoClass := function(btuples)
+local listofclasses, temp, i, j1, j2, tempclasses;
+
+listofclasses := [];
+
+for i in [1..Size(btuples)] do
+    tempclasses := [];
+    for j1 in [1..120] do
+    for j2 in [1..32] do
+    temp := ApplyIso1(besttuples[i], j1, j2);
+       if not temp in tempclasses then
+          Append(tempclasses, [temp]);
+       fi;
+    od;
+    od;
+
+    Append(listofclasses, [tempclasses]);
+od;
+
+return listofclasses;
+end;
+
+
+PermIsoFixers := function(btuples)
+local listoffixers, i, j1, j2, tempfixers;
+
+listoffixers := [];
+
+for i in [1..Size(btuples)] do
+    tempfixers := [];
+    for j1 in [1..120] do
+    for j2 in [1..32] do
+       if ApplyIso1(besttuples[i], j1, j2) = besttuples[i] then
+          Append(tempfixers, [[j1, j2]]);
+       fi;
+    od;
+    od;
+
+    Append(listoffixers, [tempfixers]);
+od;
+
+return listoffixers;
+end;
+
+
+
+TrimRedundant := function(mylist, indices, i1)
+local ghostindices, j, m, remove;
+
+if i1 = 1 then
+   ghostindices := indices;
+else
+   ghostindices := ShallowCopy(indices);
+   m := 1;
+   while m <= Size(ghostindices) do
+     remove := false;
+     j:=1;
+     while remove = false and j <= i1-1 do
+        if mylist[ghostindices[m]] in bestclasses[j] then
+           remove := true;
+        else
+           j:=j+1;
+        fi; 
+     od; 
+
+     if remove = true then
+        Remove(ghostindices, m);
+     else
+        m:=m+1;
+     fi;
+   od;
+fi;
+
+return ghostindices;
+end;
+
+
+
+
+
+LinkEdge3 := function(mylist)
+local newlist, indices, k, k1, k2, s, alledges, smalledges, i1, i2, i3, i4, i5, j1, j2, m, relators, indices0, indices1, indices2, indices3, indices4, growingedges, ge1, ge2, ge3, badtuples, graph, bestalledges, bestsmalledges, firstrelator;
+
+bestalledges := [];
+
+relators := [];
+
+alledges := [];
+s := Size(mylist);
+for k1 in [1..s] do
+      smalledges :=[];
+for k2 in [1..5] do
+      if k2 < 5 then
+         Append( smalledges, [[mylist[k1][k2], mylist[k1][k2+1]]]);
+      else
+         Append( smalledges, [[mylist[k1][k2], mylist[k1][1]]]);
+      fi;
+od;
+   Append( alledges, [smalledges]);
+od;
+
+for k1 in [1..Size(besttuples)] do
+      bestsmalledges :=[];
+for k2 in [1..5] do
+      if k2 < 5 then
+         Append( bestsmalledges, [[besttuples[k1][k2], besttuples[k1][k2+1]]]);
+      else
+         Append( bestsmalledges, [[besttuples[k1][k2], besttuples[k1][1]]]);
+      fi;
+od;
+   Append( bestalledges, [bestsmalledges]);
+od;
+
+for i1 in [1..Size(bestalledges)] do
+   firstrelator := bestalledges[i1];
+
+   indices1 := [1..s];
+   indices1 := TrimRedundant(mylist, indices1, i1);
+   indices1 := Trim3(mylist, indices1, firstrelator);
+   indices1 := TrimTriangles(mylist, indices1, firstrelator);
+   indices1 := TrimNotBipartite(mylist, indices1, firstrelator);
+
+for i2 in indices1 do
+
+   indices2 := TrimTooBig(mylist, indices1, i2);
+   growingedges := [];
+   Append(growingedges, firstrelator);
+   Append(growingedges, alledges[i2]);
+   indices2 := Trim3(mylist, indices2, alledges[i2]);
+   indices2 := TrimTriangles(mylist, indices2, growingedges);
+   indices2 := TrimNotBipartite(mylist, indices2, growingedges);   
+
+for i3 in indices2 do
+
+   indices3 := TrimTooBig(mylist, indices2, i3);
+   ge1 := ShallowCopy(growingedges);
+   Append(ge1, alledges[i3]);
+   indices3 := Trim3(mylist, indices3, alledges[i3]);
+   indices3 := TrimTriangles(mylist, indices3, ge1);
+   indices3 := TrimNotBipartite(mylist, indices3, ge1);
+
+for i4 in indices3 do
+
+   indices4 := TrimTooBig(mylist, indices2, i3);
+   ge2 := ShallowCopy(ge1);
+   Append(ge2, alledges[i4]);
+   indices4 := Trim3(mylist, indices3, alledges[i4]);
+   indices4 := TrimTriangles(mylist, indices4, ge2);
+   indices4 := TrimNotBipartite(mylist, indices4, ge2);
+
+for i5 in indices4 do
+      
+     if i5 > i4 then
+            ge3 := ShallowCopy(ge2);
+            Append(ge3, alledges[i5]);
+               
+               graph := [];
+               for k in [1..Size(ge3)] do
+                   Append(graph, [[ ge3[k][1], RemInt(ge3[k][2] + 5, 10) ]]);
+               od;
+
+               if IsK55(graph) then
+
+                  if i1 = 1 then
+                     Print( i1, " ", i2, " ", i3, " ", i4, " ", i5, "\n");  
+                     Append( relators, [[ besttuples[i1], mylist[i2], mylist[i3], mylist[i4], mylist[i5] ]] );
+                  else
+                     if not mylist[i2] in besttuples{[1..(i1-1)]} and not mylist[i3] in besttuples{[1..(i1-1)]} and not mylist[i4] in besttuples{[1..(i1-1)]}  and not mylist[i5] in besttuples{[1..(i1-1)]} then
+                          Print( i1, " ", i2, " ", i3, " ", i4, " ", i5, "\n");  
+                          Append( relators, [[ besttuples[i1], mylist[i2], mylist[i3], mylist[i4], mylist[i5] ]] );
+                     fi;
+                  fi; 
+               fi;
+      fi; 
+od; od; od; od; od; 
+
+PrintTo("relators2.txt", relators);
+return relators;
+end;

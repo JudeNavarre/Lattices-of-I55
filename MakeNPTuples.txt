@@ -1,0 +1,216 @@
+################################################################################
+# This code is used to construct the relators of the non-positive scaffolded presentations.
+################################################################################
+
+#########################################################################################
+# The function Necklace5 takes a list of relators, encoded as a list of lists of length 5 on the digits 0-9. If a set of relators can be pairwise transformed into each other by a cyclic permutation, only one representative relator is produced in the output list.
+#########################################################################################
+
+Necklace5 := function(mylist)
+local s, i, k, noturns, cycles;
+
+i:=1;
+while i <= Size(mylist) do
+   noturns := true;
+   cycles := [];
+   k:=1;
+
+# if, after a cyclic permutation, a relator r is equal to a relator who has appeared earlier in the list, delete r from the list. 
+
+   while k<=5 and noturns = true do
+       if Permuted( mylist[i], (1,2,3,4,5)^k ) in mylist{[1..i-1]} then
+          Remove(mylist, i);
+          noturns := false;
+          break;
+       fi;
+       k:=k+1;
+   od;
+if noturns=true then
+   i:=i+1;
+fi;
+od;
+
+return mylist;
+
+end;
+
+######################################################################################
+# The function NoDoubleEdges takes a list of relators, encoded as a list of lists of length 5 on the digits 0-9. If a relator would create a double edge in the Whitehead graph, delete that relator.
+######################################################################################
+
+
+NoDoubleEdges := function(mylist)
+local s, newlist, i, j1, j2, k, edges, bools;
+
+newlist := [];
+s := Size(mylist);
+for i in [1..s] do
+   bools:= [];
+   edges:= [];
+   for k in [1..5] do
+
+# Create a list of all 5 possible cyclic subwords of length 2 of a relator.
+
+      if k < 5 then
+         Append( edges, [[mylist[i][k], mylist[i][k+1]]]);
+      else
+         Append( edges, [[mylist[i][5], mylist[i][1]]]);
+      fi;
+   od;
+
+# if any 2 of those 5 cyclic subwords are equal, discard the relator. 
+
+   for j1 in [1..5] do
+      for j2 in [j1+1..5] do
+         Append( bools, [edges[j1]=edges[j2]]);
+      od;
+   od;
+   if SizeBlist(bools) = 0 then
+      Append(newlist, [mylist[i]] );
+   fi;  
+od;
+return newlist;
+end;
+
+##########################################################################
+# The function NoCancels takes a list of relators, encoded as a list of lists of length 5 on the digits 0-9. If a relator would create a loop in the Whitehead graph, delete that relator.
+##########################################################################
+
+
+NoCancels := function(mylist)
+local i, newlist, badlist;
+newlist := ShallowCopy(mylist);
+
+# Create a list of cyclic subwords of length 2 which would create loops in a Whitehead graph.
+
+badlist := [ [1,6], [6,1], [7,2], [2,7], [8,3], [3,8], [9,4], [4,9], [0,5], [5,0] ];
+
+i := 1;
+while i <= Size(newlist) do
+
+# If any cyclic subword for a relator creates a loop in a Whitehead graph, delete that relator.
+
+     if [ newlist[i][1], newlist[i][2] ] in badlist or
+        [ newlist[i][2], newlist[i][3] ] in badlist or 
+        [ newlist[i][3], newlist[i][4] ] in badlist or
+        [ newlist[i][4], newlist[i][5] ] in badlist or
+        [ newlist[i][5], newlist[i][1] ] in badlist then
+        Remove(newlist, i);
+     else
+        i := i + 1;
+     fi;
+od;
+return newlist;
+end; 
+
+#################################################################################################
+# The function NoTriangles takes a list of relators, encoded as a list of lists of length 5 on the digits 0-9. If a relator would create a loop in the Whitehead graph, delete that relator.
+#################################################################################################
+
+NoTriangles := function(mylist)
+local newlist, i, k, j, templist, notr;
+newlist := ShallowCopy(mylist);
+
+
+i := 1;
+
+while i <= Size(newlist) do
+   notr := true;
+
+# Create a list of the cyclic subwords of length 2 for a relator.
+
+   templist := [ [newlist[i][1], newlist[i][2]], 
+                 [newlist[i][2], newlist[i][3]], 
+                 [newlist[i][3], newlist[i][4]], 
+                 [newlist[i][4], newlist[i][5]], 
+                 [newlist[i][5], newlist[i][1]] ];
+   for j in [1..5] do
+       for k in [(j+1)..5] do
+
+# Check for a triangle in the corresponding Whitehead graph. 
+
+           if templist[j][1] = templist[k][1] then
+              if [ RemInt(templist[j][2]+5,10), templist[k][2] ] in templist or [ RemInt(templist[k][2]+5,10), templist[j][2] ] in templist then
+                 notr := false;
+                 break;
+              fi;
+           elif templist[j][2] = templist[k][2] then
+              if [ templist[k][2], RemInt(templist[j][2]+5,10) ] in templist or [ templist[j][2], RemInt(templist[k][2]+5,10) ] in templist then
+                 notr := false;
+                 break;
+              fi;
+           fi;
+       od;
+   od;
+
+# If a triangle in the Whitehead graph is present, delete that relator.
+
+   if notr = false then
+      Remove(newlist, i);
+   else
+      i := i + 1;
+   fi; 
+
+od;
+
+return newlist;
+end;
+
+#########################################################################################
+# The function NoInverses takes a list of relators, encoded as a list of lists of length 5 on the digits 0-9. If one relator can be transformed into another other by an inversion,only one representative relator is produced in the output list.
+#########################################################################################
+
+NoInverses := function(mylist)
+local i, newlist, templist, k;
+newlist := ShallowCopy(mylist);
+
+i := 1;
+while i <= Size(newlist) do
+   templist := [];
+   k := 5;
+   while k >= 1 do
+      Append(templist, [RemInt(newlist[i][k] + 5, 10)]);
+   k := k - 1;
+   od;
+
+   if templist in newlist then
+      Remove(newlist, i);
+   else
+      i := i + 1;
+   fi;
+od;
+return newlist;
+end;
+
+#################################################################################################
+# The following program was used to create the file 'goodtuples.txt', which contains redundancies in the form of inverses. 
+#################################################################################################
+
+MakeNPTuplesWithInverses := function()
+local tuples;
+
+tuples := Tuples([0..9], 5);
+tuples := NoDoubleEdges(tuples);
+tuples := NoCancels(tuples);
+tuples := Necklace5(tuples);
+
+return tuples;
+end;
+
+
+#################################################################################################
+# The following program was used to create the file 'newtuples.txt', which contains redundancies in the form of inverses. 
+#################################################################################################
+
+MakeNPTuples := function()
+local tuples;
+
+tuples := Tuples([0..9], 5);
+tuples := NoDoubleEdges(tuples);
+tuples := NoCancels(tuples);
+tuples := Necklace5(tuples);
+tuples := NoTriangles(tuples);
+tuples := NoInverses(tuples);
+
+return tuples;
+end;

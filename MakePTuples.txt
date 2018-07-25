@@ -1,0 +1,85 @@
+################################################################################
+# This code is used to construct the relators of the positive scaffolded presentations.
+################################################################################
+
+#########################################################################################
+# The function Necklace5 takes a list of relators, encoded as a list of lists of length 5 on the digits 0-4. If a set of relators can be pairwise transformed into each other by a cyclic permutation, only one representative relator is produced in the output list.
+#########################################################################################
+
+Necklace5 := function(mylist)
+local s, i, k, noturns, cycles;
+
+i:=1;
+while i <= Size(mylist) do
+   noturns := true;
+   cycles := [];
+   k:=1;
+
+# if, after a cyclic permutation, a relator r is equal to a relator who has appeared earlier in the list, delete r from the list. 
+
+   while k<=5 and noturns = true do
+       if Permuted( mylist[i], (1,2,3,4,5)^k ) in mylist{[1..i-1]} then
+          Remove(mylist, i);
+          noturns := false;
+          break;
+       fi;
+       k:=k+1;
+   od;
+if noturns=true then
+   i:=i+1;
+fi;
+od;
+
+return mylist;
+
+end;
+
+######################################################################################
+# The function NoDoubleEdges takes a list of relators, encoded as a list of lists of length 5 on the digits 0-4. If a relator would create a double edge in the Whitehead graph, delete that relator.
+######################################################################################
+
+
+NoDoubleEdges := function(mylist)
+local s, newlist, i, j1, j2, k, edges, bools;
+
+newlist := [];
+s := Size(mylist);
+for i in [1..s] do
+   bools:= [];
+   edges:= [];
+   for k in [1..5] do
+
+# Create a list of all 5 possible cyclic subwords of length 2 of a relator.
+
+      if k < 5 then
+         Append( edges, [[mylist[i][k], mylist[i][k+1]]]);
+      else
+         Append( edges, [[mylist[i][5], mylist[i][1]]]);
+      fi;
+   od;
+
+# if any 2 of those 5 cyclic subwords are equal, discard the relator. 
+
+   for j1 in [1..5] do
+      for j2 in [j1+1..5] do
+         Append( bools, [edges[j1]=edges[j2]]);
+      od;
+   od;
+   if SizeBlist(bools) = 0 then
+      Append(newlist, [mylist[i]] );
+   fi;  
+od;
+return newlist;
+end;
+
+##########################################################################
+
+MakePTuples := function()
+local tuples;
+
+tuples := Tuples([0..4], 5);
+tuples := Necklace5(tuples);
+tuples := NoDoubleEdges(tuples);
+
+return tuples;
+end;

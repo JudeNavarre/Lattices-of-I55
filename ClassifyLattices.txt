@@ -1,0 +1,119 @@
+################################################################################################
+# This code is used to classify the lattices of I55.
+################################################################################################
+
+# The function requires the files 'newtuples.txt' and 'goodtuples.txt'. The file 'newtuples.txt' contains tuples of numbers in the digits 0-9 which represent the generators of the free group on 5 elements and their inverses. Each tuple represents a relator of length 5. The inverse of the digit x is represented by the digit (x+5) modulo 5.  This list does not contain any relators with free cancellations, cyclic reduction, or pieces of length 2. If one relator can be obtained from another by cyclically permuting, one one of those relators appears in this list.  If one relator can be obtained from another by inverting, only one of those relators appears in this list. 
+
+# The file 'goodtuples.txt' consists of a similar set, but contains both relators and their inverses. 
+
+Read("goodtuples.txt");
+Read("newtuples.txt");
+
+##################################################################################################
+# We define the function ApplyIso. Given an integer j1 between 1 and 120 and an integer j2 between 1 and 32, this function applies to a scaffolded presentation one of the 32*120 possible isomorphisms corresponding to permuting the generators via the j1st element of the Symmetric Group on 5 elements, and inverting some subcollection of the generators according to the index j2nd element of the set of tuples of length 5 in the digits 0-1. The digit 1 in the ith entry of a tuple corresponds to inverting the generator represented by the digit i. 
+
+# The function returns the image of the relators under this isomorphism, which after being sorted will be equal to an element in the set of relators constructed via ConstructNPLattices or ConstructPLattices.
+##################################################################################################
+
+ApplyIso := function(oldrel, j1, j2)
+local i,j,k,p,switch, rel;
+
+# We initialize a relator of the correct shape and length.
+
+rel := [[0,0,0,0,0],[0,0,0,0,0], [0,0,0,0,0],[0,0,0,0,0], [0,0,0,0,0]];
+
+p := Elements(SymmetricGroup(5))[j1];
+switch := Tuples([0,1],5)[j2];
+
+for i in [1..5] do
+    for j in [1..5] do
+
+# take a relator, which is depicted using the digits 0 - 9. If the digit is between 0 and 4, increase the digit by 1 so that can be acted upon by the symmetric group. Perform this action, and then return the digit to the correct range by subtracting 1. If the digit is between 5 and 9, decrease the digit by 4 so that it can be acted upon by the symmetric group. Perform this action, and then return the digit to the correct range by adding 4. 
+
+# Subsequently, invert the generators by adding 5 modulo 10 to the digits or inverse digits corresponding to 1s in the tuple indexed by j2. 
+
+        if oldrel[i][j] < 5 then
+           rel[i][j] := ((oldrel[i][j]+1)^p)-1; 
+           if switch[rel[i][j]+1] = 1 then
+              rel[i][j] := RemInt(rel[i][j]+5,10);
+           fi;
+        else
+           rel[i][j] := ((oldrel[i][j]-4)^p)+4;
+           if switch[rel[i][j]-4] = 1 then
+              rel[i][j] := RemInt(rel[i][j]+5,10);
+           fi;
+        fi;
+    od;
+
+# Cyclically permute the relator until it equals a representative in goodtuples.
+        
+        while not rel[i] in goodtuples do
+            rel[i] := Permuted(rel[i], (1,2,3,4,5));
+        od;
+
+# Invert the relator until it equals a representative in newtuples.
+
+        if not rel[i] in newtuples then
+           rel[i] := [ RemInt(rel[i][5]+5,10), RemInt(rel[i][4]+5,10),RemInt(rel[i][3]+5,10),RemInt(rel[i][2]+5,10),RemInt(rel[i][1]+5,10)];
+        fi;
+
+od;
+
+return rel;
+end;
+
+######################################################################################
+# The function permiso takes as input a set 'relators' of non-positive scaffolded presentations. If a collection of presentations can be matched pairwise to one another by applying some generator permutation or invertion, all but one of those presentations is removed. 
+######################################################################################
+
+permiso := function(relators)
+local i, k, j1, j2, m, currels, S, temprels, rel, ghostindices, classes, setofclasses, restart, indices;
+
+indices := [1..Size(relators)];
+ghostindices := ShallowCopy(indices);
+
+  for j1 in [1..120] do
+  for j2 in [1..32] do
+
+   i := 1;
+   while i <= Size(ghostindices) do
+
+# initialize the working list of presentations to all the scaffolded presentations.
+     
+     currels := relators[ghostindices[i]];
+
+# apply an isomorphism taking generators to generators or their inverses. 
+
+     rel := ApplyIso( currels, j1, j2);
+
+# sort the output so that it appears in the output of ConstructNPLattices or ConstructPLattices.
+
+     Sort(rel);
+
+# If the presentation is not fixed by the isomorphism, check if the output appears in the working list. If so, delete the presentation from the working list. 
+
+     if not rel = currels then
+        if rel in relators{ghostindices} then
+           Print(i, " ");
+           Remove(ghostindices,i);
+        else
+           i := i+1;
+        fi;
+     else
+        i := i+1;
+     fi;
+
+   od;
+
+
+   od;
+   od;
+
+# return the working list of presentations
+
+  return relators{ghostindices};
+end;
+
+
+
+
